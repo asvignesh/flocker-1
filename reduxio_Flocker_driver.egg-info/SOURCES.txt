@@ -1,0 +1,13 @@
+setup.py
+reduxio_Flocker_driver.egg-info/PKG-INFO
+reduxio_Flocker_driver.egg-info/SOURCES.txt
+reduxio_Flocker_driver.egg-info/dependency_links.txt
+reduxio_Flocker_driver.egg-info/pbr.json
+reduxio_Flocker_driver.egg-info/requires.txt
+reduxio_Flocker_driver.egg-info/top_level.txt
+reduxio_flocker_plugin/__init__.py
+reduxio_flocker_plugin/vsphere_blockdevice.py
+reduxio_flocker_plugin/config/example-agent.yml
+reduxio_flocker_plugin/config/example-mysql-application.yml
+reduxio_flocker_plugin/config/example-mysql-deployment-1.yml
+reduxio_flocker_plugin/config/example-mysql-deployment-2.yml

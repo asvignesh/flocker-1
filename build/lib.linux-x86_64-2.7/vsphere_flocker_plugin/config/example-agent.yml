@@ -1,0 +1,15 @@
+version: 1
+control-service:
+  hostname: "192.166.12.21"
+dataset:
+  backend: "vsphere_flocker_plugin"
+  vc_ip: "192.168.10.34"
+  username: "administrator"
+  password: "Vital@123"
+  datacenter_name: "Datacenter1"
+  datastore_name: "datastore1"
+  ssl_verify_cert: "no"
+  ssl_key_file: ""
+  ssl_cert_file: ""
+  ssl_thumbprint: ""
+
