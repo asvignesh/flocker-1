@@ -211,7 +211,7 @@ class ReduxioStorageDriverAPI(object):
         logger.info("Checking if the volume {} is attached to any node/s.".format(volume_name))
         assignment_list = self._rdxapi.list_assignments(vol_name=volume_name)
         if (len(assignment_list) > 0):
-            logging.error("Volume is attached to a node so cannot destroy.")
+            logging.error("Volume {} is attached to a node, so it cannot be destroyed.".format(volume_name))
             raise VolumeAttached(blockdevice_id)
 
         try:
@@ -242,6 +242,7 @@ class ReduxioStorageDriverAPI(object):
             logger.info("Checking if the volume {} is attached to any node/s".format(volume_name))
             assignmentlist = self._rdxapi.list_assignments(vol_name=volume_name)
             if (len(assignmentlist) > 0):
+                logging.error("Volume {} is already attached to a node.".format(volume_name))
                 raise AlreadyAttachedVolume(blockdevice_id)
 
             hostname = None
@@ -322,6 +323,7 @@ class ReduxioStorageDriverAPI(object):
     def get_assignments_of_volume(self, blockdevice_id, volume_name):
         assignmentlist = self._rdxapi.list_assignments(vol_name=volume_name)
         if (len(assignmentlist) == 0):
+            logging.error("Volume {} is not attached to any node/s.".format(volume_name))
             raise UnattachedVolume(blockdevice_id)
         return assignmentlist
 
@@ -330,6 +332,7 @@ class ReduxioStorageDriverAPI(object):
         try:
             uuid.UUID(volumeinfo[u'description'])
         except Exception as e:
+            logging.error("Volume with block-device id {} does not exist.".format(blockdevice_id))
             raise UnknownVolume(blockdevice_id)
         return volumeinfo
 
