@@ -11,8 +11,10 @@ LOG = logging.getLogger(__name__)
 
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
+    LOG.info("Running command -> cat /etc/iscsi/initiatorname.iscsi")
     output = subprocess.check_output(
         ['cat', '/etc/iscsi/initiatorname.iscsi'])
+    LOG.debug("Output: {} .".format(output))
     lines = output.split('\n')
     for line in lines:
         if '=' in line:
