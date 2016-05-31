@@ -148,13 +148,8 @@ def find_paths(device_id):
                 LOG.info(output_norm)
 
                 if device_id_norm == output_norm:
-                    LOG.debug("2nd if success")
                     LOG.info('Found %s at %s', device_id, dev)
                     result.append('/dev/%s' % dev)
-                else:
-                    result.append('/dev/sdb')
-                    LOG.debug("2nd if fail")
-                    break
             except Exception:
                 LOG.exception('Error getting device id for %s', dev)
 
