@@ -8,6 +8,10 @@ import time
 
 LOG = logging.getLogger(__name__)
 
+class InvalidDataIP(Exception):
+    """
+    Invalid DatasetIP
+    """
 
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
@@ -53,12 +57,28 @@ def _do_login_logout(iqn, ip, do_login):
     return False
 
 
+def _exec_pipe(cmd):
+    LOG.info('Running %s', cmd)
+    sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = ''.join(sp.communicate())
+    returncode = sp.wait()
+    if returncode == 0:
+        LOG.debug('Result: %s', output)
+        return output
+    else:
+        for line in output:
+            LOG.debug(line)
+        raise Exception()
+
+
 def _manage_session(ip_addr, port, do_login=True):
     """Manage iSCSI sessions for all ports in a portal."""
     if ip_addr == '0.0.0.0':
         return
-    output = _exec('iscsiadm -m discovery -t st -p %s %s' %
-                   (ip_addr, port))
+    try:
+        output = _exec_pipe('iscsiadm -m discovery -t st -p %s %s' % (ip_addr, port))
+    except:
+        raise InvalidDataIP("Invalid data ip exception")
     lines = output.split('\n')
     for line in lines:
         if ':' not in line:
