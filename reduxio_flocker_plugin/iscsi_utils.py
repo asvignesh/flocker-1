@@ -8,11 +8,17 @@ import time
 
 LOG = logging.getLogger(__name__)
 
+class InvalidDataIP(Exception):
+    """
+    Invalid DatasetIP
+    """
 
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
+    LOG.info("Running command -> cat /etc/iscsi/initiatorname.iscsi")
     output = subprocess.check_output(
         ['cat', '/etc/iscsi/initiatorname.iscsi'])
+    LOG.debug("Output: {} .".format(output))
     lines = output.split('\n')
     for line in lines:
         if '=' in line:
@@ -51,12 +57,28 @@ def _do_login_logout(iqn, ip, do_login):
     return False
 
 
+def _exec_pipe(cmd):
+    LOG.info('Running %s', cmd)
+    sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = ''.join(sp.communicate())
+    returncode = sp.wait()
+    if returncode == 0:
+        LOG.debug('Result: %s', output)
+        return output
+    else:
+        for line in output:
+            LOG.debug(line)
+        raise Exception()
+
+
 def _manage_session(ip_addr, port, do_login=True):
     """Manage iSCSI sessions for all ports in a portal."""
     if ip_addr == '0.0.0.0':
         return
-    output = _exec('iscsiadm -m discovery -t st -p %s %s' %
-                   (ip_addr, port))
+    try:
+        output = _exec_pipe('iscsiadm -m discovery -t st -p %s %s' % (ip_addr, port))
+    except:
+        raise InvalidDataIP("Invalid data ip exception")
     lines = output.split('\n')
     for line in lines:
         if ':' not in line:
@@ -148,13 +170,8 @@ def find_paths(device_id):
                 LOG.info(output_norm)
 
                 if device_id_norm == output_norm:
-                    LOG.debug("2nd if success")
                     LOG.info('Found %s at %s', device_id, dev)
                     result.append('/dev/%s' % dev)
-                else:
-                    result.append('/dev/sdb')
-                    LOG.debug("2nd if fail")
-                    break
             except Exception:
                 LOG.exception('Error getting device id for %s', dev)
 
