@@ -122,13 +122,14 @@ class ReduxioStorageDriverAPI(object):
         """
         return unicode(self.initiator_name)
 
-    # def allocation_unit(self):
-    #     """
-    #     Return allocation unit
-    #     """
-    #     logging.debug("vSphere allocation unit: " +
-    #                   str(int(GiB(4).to_Byte().value)))
-    #     return int(GiB(4).to_Byte().value)
+    def allocation_unit(self):
+        """
+        Return allocation unit
+        """
+
+        logging.debug("Reduxio System allocation unit: " +
+                      str(int(GiB(1).to_Byte().value)))
+        return int(GiB(1).to_Byte().value)
 
     def _normalize_uuid(self, uuid):
         uuid = uuid.translate(None, " -\n'")
