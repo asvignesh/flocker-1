@@ -120,20 +120,23 @@ class ReduxioStorageDriverAPI(object):
         with ``attach_volume`` to locally attach volumes.
 
         """
+        logging.info('Initiator name is {} .'.format(self.initiator_name))
         return unicode(self.initiator_name)
 
     def allocation_unit(self):
         """
         Return allocation unit
         """
-
+        logging.info('Setting minimum allocation unit to Multiplies of 1GiB')
         logging.debug("Reduxio System allocation unit: " +
                       str(int(GiB(1).to_Byte().value)))
         return int(GiB(1).to_Byte().value)
 
     def _normalize_uuid(self, uuid):
+        logging.debug('uuid to normalize is {}'.format(uuid))
         uuid = uuid.translate(None, " -\n'")
         uuid = uuid.lower()
+        logging.debug('uuid after normalizing is {}'.format(uuid))
         return uuid
 
     def create_volume_with_profile(self, dataset_id, size, profile_name):
@@ -162,6 +165,7 @@ class ReduxioStorageDriverAPI(object):
         return volume
 
     def build_block_device(self, blockdevice_id, dataset_id, volume_size, attach_to=None):
+        logging.debug('Building blockdevice with blockdevice_id {}, volume_size {}, dataset_id {}, attach_to {}.'.format(blockdevice_id, volume_size, dataset_id, attach_to))
         return BlockDeviceVolume(
             size=volume_size,
             dataset_id=dataset_id,
@@ -208,6 +212,7 @@ class ReduxioStorageDriverAPI(object):
         try:
             volume_info = self.find_volume_by_blockdevice_id(blockdevice_id)
             volume_name = volume_info[u'name']
+            logging.debug('Found the volume, volume name is {} .'.format(volume_name))
         except Exception as e:
             logging.error("Unable to find the volume with the provided blockdevice_id " + str(e))
             raise UnknownVolume(e)
@@ -242,8 +247,9 @@ class ReduxioStorageDriverAPI(object):
             volume_info = self.find_volume_by_blockdevice_id(blockdevice_id)
             dataset_id = uuid.UUID(volume_info[u'description'])
             volume_name = volume_info[u'name']
+            logging.debug('Found the volume, volume name is {}, dataset id is {} .'.format(volume_name, dataset_id))
         except Exception as e:
-            logging.error('An error occurred finding the  volume {} : {}'.format(blockdevice_id, e))
+            logging.error('An error occurred finding the volume {} : {}'.format(blockdevice_id, e))
             raise UnknownVolume(e)
 
         try:
@@ -273,7 +279,7 @@ class ReduxioStorageDriverAPI(object):
 
             attached_volume = self.build_block_device(blockdevice_id=blockdevice_id, dataset_id=dataset_id,
                                                       volume_size=volume_size, attach_to=attach_to)
-
+            logging.info('Assigning host {} to volume {} is successful.'.format(hostname, volume_name))
             # Fetching the DataIPs and add to iscsi session
             logger.info("Getting all data IPs.")
             data_ips = []
@@ -295,10 +301,13 @@ class ReduxioStorageDriverAPI(object):
             for data_ip in data_ips:
                 try:
                     iter_count += 1
+                    logging.debug('Trying target discovery using data ip {} and port {} .'.format(data_ip, scsi_tcp_port))
                     _manage_session(ip_addr=data_ip, port=scsi_tcp_port)
                     break
                 except Exception:
+                    logging.debug('Failed to discover targets with data ip {}, will continue with next data ip.'.format(data_ip))
                     if (iter_count == data_ips.__len__()):
+                        logging.debug('No more data ips, Target discovery failed.')
                         raise Exception()
                     continue
 
@@ -322,6 +331,7 @@ class ReduxioStorageDriverAPI(object):
         try:
             volumeinfo = self.find_volume_by_blockdevice_id(blockdevice_id)
             volume_name = volumeinfo[u'name']
+            logging.debug('Found the volume, volume name is {} .'.format(volume_name))
         except Exception as e:
             logging.error('An error occurred finding the  volume {} : {}'.format(blockdevice_id, e))
             raise UnknownVolume(e)
@@ -345,13 +355,15 @@ class ReduxioStorageDriverAPI(object):
             raise Exception(ex)
 
     def get_assignments_of_volume(self, blockdevice_id, volume_name):
+        logging.info('Getting the list of hosts assigned to volume {} .'.format(volume_name))
         assignmentlist = self._rdxapi.list_assignments(vol_name=volume_name)
         if (len(assignmentlist) == 0):
-            logging.error("Volume {} is not attached to any node/s.".format(volume_name))
+            logging.error("Volume {} is not attached to any node.".format(volume_name))
             raise UnattachedVolume(blockdevice_id)
         return assignmentlist
 
     def find_volume_by_blockdevice_id(self, blockdevice_id):
+        logging.debug('Trying to find the volume by blockdevice_id {} .'.format(blockdevice_id))
         try:
             volumeinfo = self._rdxapi.find_volume_by_wwid(wwid=blockdevice_id)[0]
             uuid.UUID(volumeinfo[u'description'])
@@ -371,7 +383,7 @@ class ReduxioStorageDriverAPI(object):
                 except Exception as e:
                     continue
 
-                logging.debug("*****found a dataset")
+                logging.debug("Found a dataset")
                 attached_to = None
                 assignmentlist = self._rdxapi.list_assignments(vol_name=vol[u'name'])
                 if (len(assignmentlist) > 0):
@@ -382,7 +394,7 @@ class ReduxioStorageDriverAPI(object):
                 logging.debug(
                     "found volume {} with dataset id {} assigned with {} .".format(vol[u'name'], vol[u'description'],
                                                                                    attached_to))
-            logging.debug("List volumes success")
+            logging.debug("List volumes successful")
             return volumes
         except Exception as e:
             logging.error("List volumes failed with error: " + str(e))
@@ -418,6 +430,7 @@ class ReduxioStorageDriverAPI(object):
         """
         retries = 0
         while retries < MAX_RESCAN_ATTEMPTS:
+            logging.info('Trying to find paths with device id {} .'.format(blockdevice_id))
             paths = find_paths(blockdevice_id)
             if paths:
                 # Just return the first path
@@ -431,6 +444,7 @@ class ReduxioStorageDriverAPI(object):
 
 
 def reduxio_init_from_configuration(cluster_id, rdx_ip, password):
+    logging.debug('Initializing Reduxio...')
     return ReduxioStorageDriverAPI(
         cluster_id=cluster_id,
         rdx_ip=rdx_ip,

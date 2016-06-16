@@ -36,11 +36,16 @@ def api_factory(cluster_id, **kwargs):
             raise Exception('password in Agent.yml is not configured properly.')
     except Exception as e:
         logger.error('Agent.yml is not configured properly.')
-        raise Exception()
+        raise Exception('Agent.yml is not configured properly.')
     return reduxio_init_from_configuration(cluster_id=cluster_id,
                                            rdx_ip=rdx_ip,
                                            password=rdx_password)
 
+def check_multipath():
+    try:
+        _exec('multipath')
+    except:
+        raise Exception('multipath command error')
 
 try:
     get_initiator_name()
@@ -49,7 +54,7 @@ except:
     raise Exception('iscsi initiator is not installed')
 
 try:
-    _exec('multipath')
+    check_multipath()
 except:
     logger.error('Error running multipath, please make sure that multipath-tools are installed.')
     raise Exception('multipath-tools are not installed')

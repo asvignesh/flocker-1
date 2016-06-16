@@ -33,7 +33,7 @@ def get_initiator_name():
                 LOG.debug("Returning initiator name {} .".format(parts[1]))
                 return parts[1]
     except:
-        raise Exception()
+        raise Exception('Unable to find initiator name')
 
 
 def _exec(cmd):
@@ -60,7 +60,7 @@ def _exec_pipe(cmd):
         return output
     else:
         LOG.debug(output)
-        raise Exception()
+        raise Exception('Command returned with non-zero return code')
 
 
 def _do_login_logout(iqn, ip, do_login):
@@ -68,7 +68,10 @@ def _do_login_logout(iqn, ip, do_login):
     try:
         action = "-u"  # for log out
         if do_login:
+            logging.debug('Trying to perform iSCSI login.')
             action = "-l"
+        else:
+            logging.debug('Trying to perform iSCSI logout.')
         _exec('iscsiadm -m node %s -T %s -p %s' %
               (action,
                iqn,
@@ -76,7 +79,10 @@ def _do_login_logout(iqn, ip, do_login):
         LOG.info('Performed %s to %s at %s', action, iqn, ip)
         return True
     except subprocess.CalledProcessError:
-        LOG.info('Error logging in.')
+        if do_login:
+            LOG.info('Error while performing iSCSI login.')
+        else:
+            LOG.info('Error while performing iSCSI logout.')
     return False
 
 
@@ -100,16 +106,19 @@ def _manage_session(ip_addr, port, do_login=True):
 
 def iscsi_session_login(ip_addr, port=3260):
     """Perform an iSCSI login."""
+    logging.debug('Trying to do iscsi session logging with ip {} and port 3260 .'.format(ip_addr))
     return _manage_session(ip_addr, port, True)
 
 
 def iscsi_session_logout(portal_ip, port=3260):
     """Perform an iSCSI logout."""
+    logging.debug('Trying to do iscsi session logout with portal ip {} and port 3260 .'.format(portal_ip))
     return _manage_session(portal_ip, port, False)
 
 
 def rescan_iscsi_session():
     """Perform an iSCSI rescan."""
+    logging.info('Trying to perform iscsi session rescan.')
     start = datetime.now()
     output = _exec('iscsiadm -m session --rescan')
     lines = output.split('\n')
@@ -137,6 +146,7 @@ def _get_multipath_device(sd_device):
     """
     result = None
     try:
+        logging.info('Checking for multipath with path {} .'.format(sd_device))
         output = _exec('multipath -l %s' % sd_device)
         if output:
             lines = output.split('\n')
@@ -148,6 +158,7 @@ def _get_multipath_device(sd_device):
                 LOG.info('Found multipath device %s', result)
                 break
     except Exception:
+        logging.info('No multipath with path {} .'.format(sd_device))
         # Oh well, we tried.. simply pass it and go with the disk instead of mapper
         pass
 
@@ -166,6 +177,7 @@ def find_paths(device_id):
     regex = re.compile('sd[a-z]+(?![\d])')
     for dev in os.listdir('/dev/'):
         if regex.match(dev):
+            LOG.info('Checking device id of path /dev/{} .'.format(dev))
             try:
                 output = _exec('/lib/udev/scsi_id --page=0x83 '
                                '--whitelisted --device=/dev/%s' %
@@ -189,6 +201,7 @@ def find_paths(device_id):
 
     if result:
         # Check if there is a multipath device
+        logging.info('Checking for a multipath')
         mpath_dev = _get_multipath_device(result[0])
         if mpath_dev:
             result.insert(0, mpath_dev)
