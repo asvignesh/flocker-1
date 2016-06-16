@@ -1,3 +1,8 @@
+'''
+Copyright 2016 Reduxio, Inc.  All rights reserved.  Licensed under the Apache v2 License.
+
+simple helper utility to generate the volume name and host name, will use for profiles later
+'''
 import random
 import socket
 import string

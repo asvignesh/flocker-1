@@ -1,3 +1,8 @@
+'''
+Copyright 2016 Reduxio, Inc.  All rights reserved.  Licensed under the Apache v2 License.
+
+ISCSI Utility functions for iscsi tools and multi path commands
+'''
 from datetime import datetime
 import logging
 import os
@@ -8,10 +13,12 @@ import time
 
 LOG = logging.getLogger(__name__)
 
+
 class InvalidDataIP(Exception):
     """
     Invalid DatasetIP
     """
+
 
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
@@ -43,23 +50,6 @@ def _exec(cmd):
     return output
 
 
-def _do_login_logout(iqn, ip, do_login):
-    """Perform the iSCSI login or logout."""
-    try:
-        action = "-u"
-        if do_login:
-            action = "-l"
-        _exec('iscsiadm -m node %s -T %s -p %s' %
-              (action,
-               iqn,
-               ip))
-        LOG.info('Performed %s to %s at %s', action, iqn, ip)
-        return True
-    except subprocess.CalledProcessError:
-        LOG.info('Error logging in.')
-    return False
-
-
 def _exec_pipe(cmd):
     LOG.info('Running %s', cmd)
     sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -71,6 +61,23 @@ def _exec_pipe(cmd):
     else:
         LOG.debug(output)
         raise Exception()
+
+
+def _do_login_logout(iqn, ip, do_login):
+    """Perform the iSCSI login or logout."""
+    try:
+        action = "-u"  # for log out
+        if do_login:
+            action = "-l"
+        _exec('iscsiadm -m node %s -T %s -p %s' %
+              (action,
+               iqn,
+               ip))
+        LOG.info('Performed %s to %s at %s', action, iqn, ip)
+        return True
+    except subprocess.CalledProcessError:
+        LOG.info('Error logging in.')
+    return False
 
 
 def _manage_session(ip_addr, port, do_login=True):
@@ -91,17 +98,17 @@ def _manage_session(ip_addr, port, do_login=True):
         _do_login_logout(iqn, ip, do_login)
 
 
-def iscsi_login(ip_addr, port=3260):
+def iscsi_session_login(ip_addr, port=3260):
     """Perform an iSCSI login."""
     return _manage_session(ip_addr, port, True)
 
 
-def iscsi_logout(portal_ip, port=3260):
+def iscsi_session_logout(portal_ip, port=3260):
     """Perform an iSCSI logout."""
     return _manage_session(portal_ip, port, False)
 
 
-def rescan_iscsi():
+def rescan_iscsi_session():
     """Perform an iSCSI rescan."""
     start = datetime.now()
     output = _exec('iscsiadm -m session --rescan')
@@ -141,7 +148,7 @@ def _get_multipath_device(sd_device):
                 LOG.info('Found multipath device %s', result)
                 break
     except Exception:
-        # Oh well, we tried
+        # Oh well, we tried.. simply pass it and go with the disk instead of mapper
         pass
 
     return result
@@ -155,7 +162,6 @@ def find_paths(device_id):
     :param device_id: The page 83 device id.
     :returns: A list of the local paths.
     """
-    # TODO: get by /dev/disk/by-uuid
     result = []
     regex = re.compile('sd[a-z]+(?![\d])')
     for dev in os.listdir('/dev/'):
@@ -178,7 +184,7 @@ def find_paths(device_id):
             except Exception:
                 LOG.error('Error getting device id for /dev/%s', dev)
 
-    # Functional tests always want the same device reported
+    # ClusterHQ Functional tests always want the same device reported
     result.sort()
 
     if result:
@@ -223,5 +229,3 @@ def remove_device(path):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-
-    # Get command line arguments

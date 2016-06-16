@@ -1,1 +1,1 @@
-vsphere_flocker_plugin
+reduxio_flocker_plugin

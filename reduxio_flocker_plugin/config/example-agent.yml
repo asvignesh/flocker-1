@@ -1,7 +1,7 @@
 version: 1
 control-service:
- hostname: "dockernode113"
+ hostname: "dockernode1"
 dataset:
  backend: "reduxio_flocker_plugin"
- rdx_ip: "172.17.180.223"
- password: "admin"
+ rdx_ip: "reduxiohost1"
+ password: "mypassword"

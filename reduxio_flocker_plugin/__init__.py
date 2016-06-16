@@ -26,14 +26,14 @@ def api_factory(cluster_id, **kwargs):
         if kwargs[u'rdx_ip']:
             rdx_ip = kwargs[u'rdx_ip']
         else:
-            logger.error('Agent.yml is not configured properly.')
-            raise Exception('Agent.yml is not configured properly.')
+            logger.error('rdx_ip in Agent.yml is not configured properly.')
+            raise Exception('rdx_ip in Agent.yml is not configured properly.')
 
         if kwargs[u'password']:
             rdx_password = kwargs[u'password']
         else:
-            logger.error('Agent.yml is not configured properly.')
-            raise Exception('Agent.yml is not configured properly.')
+            logger.error('password in Agent.yml is not configured properly.')
+            raise Exception('password in Agent.yml is not configured properly.')
     except Exception as e:
         logger.error('Agent.yml is not configured properly.')
         raise Exception()
@@ -46,13 +46,13 @@ try:
     get_initiator_name()
 except:
     logger.error('Unable to get initiator-name, please make sure that open-iscsi is installed.')
-    raise Exception()
+    raise Exception('iscsi initiator is not installed')
 
 try:
     _exec('multipath')
 except:
     logger.error('Error running multipath, please make sure that multipath-tools are installed.')
-    raise Exception()
+    raise Exception('multipath-tools are not installed')
 
 FLOCKER_BACKEND = BackendDescription(
     name=u"reduxio_flocker_plugin",

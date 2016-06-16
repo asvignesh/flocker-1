@@ -1,3 +1,6 @@
+'''
+Copyright 2016 Reduxio, Inc.  All rights reserved.
+'''
 #!/usr/bin/env python3
 
 import paramiko
@@ -23,6 +26,7 @@ CLI_DATE_FORMAT = "%m-%Y-%d %H:%M:%S"
 CONNECT_LOCK_NAME = "reduxio_cli_Lock"
 CLI_CONNECTION_RETRY_SLEEP = 5
 CLI_SSH_CMD_TIMEOUT = 20
+CLI_CONNECT_TIMEOUT = 50
 
 logging = logging.getLogger(__name__)
 
@@ -123,15 +127,17 @@ class ReduxioAPI(object):
             self._connect()
 
     def _connect(self):
+        logging.info("signin to Reduxio api client.")
         self.connected = False
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            self.ssh.connect(self.host, username=self.user, password=self.password)
+            self.ssh.connect(self.host, username=self.user, password=self.password, timeout=CLI_CONNECT_TIMEOUT)
             self.connected = True
         except paramiko.ssh_exception.AuthenticationException:
             raise RdxAPIConnectionException("Authentication Error. Check login credentials")
-        except Exception:
+        except Exception as e:
+            logging.error(str)
             raise RdxAPIConnectionException(
                 "Failed to create ssh connection to Reduxio. Please check network connection or Reduxio hostname/IP.")
 
@@ -139,18 +145,18 @@ class ReduxioAPI(object):
     def _run_cmd(self, cmd):
         cmd.json()
         logging.info("Running cmd: {}".format(cmd))
-        self._reconnect_if_needed()
         success = False
         for x in range(1, CONNECTION_RETRY_NUM):
             try:
+                self._reconnect_if_needed()
                 stdin, stdout, stderr = self.ssh.exec_command(command=str(cmd), timeout=CLI_SSH_CMD_TIMEOUT)
                 success = True
                 break
             except Exception as e:
                 logging.error(str(e))
                 logging.error("Failed running cli command, retrying({}/{})".format(x, CONNECTION_RETRY_NUM))
+                self.connected = False
                 time.sleep(CLI_CONNECTION_RETRY_SLEEP)
-                self._connect()
 
         if not success:
             raise RdxAPIConnectionException(
