@@ -15,26 +15,16 @@ from twisted.python import filepath
 from twisted.python.constants import Values
 from zope.interface import implementer
 
-from iscsi_utils import get_initiator_name, _manage_session, rescan_iscsi, find_paths
+from iscsi_utils import get_initiator_name, _manage_session, rescan_iscsi, find_paths, remove_device
 from rdx_cli_api import ReduxioAPI
 from rdx_helper import RdxHelper
-from logging.handlers import RotatingFileHandler
 
 __author__ = 'vignesh'
 
-LOG_FILENAME = '/var/log/flocker/reduxio.log'
+
 MAX_RESCAN_ATTEMPTS = 4
 SLEEP_BWN_RESCAN_IN_S = 5
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
-                                               maxBytes=1 * 1024 * 1024,
-                                               backupCount=10)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(funcName)s: %(message)s'))
-
-logger.addHandler(handler)
+logger = logging.getLogger(__name__)
 
 
 # logging.basicConfig(filename=LOG_FILENAME,
@@ -312,11 +302,15 @@ class ReduxioStorageDriverAPI(object):
 
         assignmentlist = self.get_assignments_of_volume(blockdevice_id, volume_name)
 
+        logging.debug("Finding paths with device id {} .".format(blockdevice_id))
+        paths = find_paths(blockdevice_id)
+        for path in paths:
+            remove_device(path)
+
         logger.info("Revoking all hosts assigned to volume {} .".format(volume_name))
         for assignment in assignmentlist:
             logging.debug("Revoking {} .".format(volume_name))
             self._rdxapi.unassign(vol_name=volume_name, host_name=assignment[u'host'])
-
         rescan_iscsi()
         logging.debug("Volume {} successfully detached.".format(blockdevice_id))
 

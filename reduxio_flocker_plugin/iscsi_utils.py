@@ -16,14 +16,17 @@ class InvalidDataIP(Exception):
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
     LOG.info("Running command -> cat /etc/iscsi/initiatorname.iscsi")
-    output = subprocess.check_output(
-        ['cat', '/etc/iscsi/initiatorname.iscsi'])
-    LOG.debug("Output: {} .".format(output))
-    lines = output.split('\n')
-    for line in lines:
-        if '=' in line:
-            parts = line.split('=')
-            return parts[1]
+    cmd = 'cat /etc/iscsi/initiatorname.iscsi'
+    try:
+        output = _exec_pipe(cmd)
+        lines = output.split('\n')
+        for line in lines:
+            if '=' in line:
+                parts = line.split('=')
+                LOG.debug("Returning initiator name {} .".format(parts[1]))
+                return parts[1]
+    except:
+        raise Exception()
 
 
 def _exec(cmd):
@@ -66,8 +69,7 @@ def _exec_pipe(cmd):
         LOG.debug('Result: %s', output)
         return output
     else:
-        for line in output:
-            LOG.debug(line)
+        LOG.debug(output)
         raise Exception()
 
 
@@ -112,13 +114,16 @@ def _get_multipath_device(sd_device):
     """Get the multipath device for a volume.
 
     Output from multipath -l should be something like:
-    36000d31000fa9e0000000000000002f2 dm-5 COMPELNT,Compellent Vol
-    size=1.0G features='1 queue_if_no_path' hwhandler='0' wp=rw
-    `-+- policy='queue-length 0' prio=-1 status=active
-      |- 8:0:0:2  sdx 65:112 active undef running
-      |- 12:0:0:2 sdv 65:80  active undef running
-      |- 14:0:0:2 sdw 65:96  active undef running
-      `- 10:0:0:2 sdy 65:128 active undef running
+    36f4032f0004000000000000000000754 dm-2 REDUXIO ,TCAS
+        size=16G features='0' hwhandler='0' wp=rw
+        |-+- policy='round-robin 0' prio=-1 status=active
+        | `- 4:0:0:1 sdc 8:32 active undef running
+        |-+- policy='round-robin 0' prio=-1 status=enabled
+        | `- 6:0:0:1 sde 8:64 active undef running
+        |-+- policy='round-robin 0' prio=-1 status=enabled
+        | `- 5:0:0:1 sdd 8:48 active undef running
+        `-+- policy='round-robin 0' prio=-1 status=enabled
+          `- 3:0:0:1 sdb 8:16 active undef running
 
     :param sd_device: The SCSI device to look for.
     :return: The /dev/mapper/ multipath device if one exists.
@@ -129,10 +134,11 @@ def _get_multipath_device(sd_device):
         if output:
             lines = output.split('\n')
             for line in lines:
-                if 'COMPELNT' not in line:
+                if 'REDUXIO' not in line:
                     continue
                 name = line.split(' ')[0]
                 result = '/dev/mapper/%s' % name
+                LOG.info('Found multipath device %s', result)
                 break
     except Exception:
         # Oh well, we tried
@@ -158,22 +164,19 @@ def find_paths(device_id):
                 output = _exec('/lib/udev/scsi_id --page=0x83 '
                                '--whitelisted --device=/dev/%s' %
                                dev)
-                LOG.info(output)
-                LOG.info(output.__len__())
-                LOG.info(type(output))
-                LOG.info(type(device_id))
-
                 device_id_norm = device_id.lower()
+                LOG.info("Checking path /dev/{} for device id {} .".format(dev, device_id_norm))
                 output_norm = output.decode('utf-8')[1:33].strip().lower()
+                LOG.info("Path /dev/{} has device id {} .".format(dev, output_norm))
 
-                LOG.info(device_id_norm)
-                LOG.info(output_norm)
+                LOG.debug(device_id_norm)
+                LOG.debug(output_norm)
 
                 if device_id_norm == output_norm:
-                    LOG.info('Found %s at %s', device_id, dev)
+                    LOG.info('Found device %s at path %s', device_id, dev)
                     result.append('/dev/%s' % dev)
             except Exception:
-                LOG.exception('Error getting device id for %s', dev)
+                LOG.error('Error getting device id for /dev/%s', dev)
 
     # Functional tests always want the same device reported
     result.sort()
@@ -182,7 +185,6 @@ def find_paths(device_id):
         # Check if there is a multipath device
         mpath_dev = _get_multipath_device(result[0])
         if mpath_dev:
-            LOG.info('Found multipath device %s', mpath_dev)
             result.insert(0, mpath_dev)
     return result
 
@@ -196,6 +198,7 @@ def remove_device(path):
         return
 
     if '/dev/sd' in path:
+        LOG.info("Trying to remove device from path {} .".format(path))
         sd = path.replace('/dev/', '')
         remove_path = '/sys/block/%s/device/delete' % sd
         if os.path.exists(remove_path):
@@ -210,6 +213,7 @@ def remove_device(path):
             except Exception:
                 LOG.exception('Error removing device %s', sd)
     else:
+        LOG.info("Trying to remove device from multipath {} .".format(path))
         try:
             path = path.replace('/dev/mapper/', '')
             _exec('multipath -f %s' % path)
