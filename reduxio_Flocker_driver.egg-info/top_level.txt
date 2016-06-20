@@ -1,1 +1,0 @@
-reduxio_flocker_plugin

@@ -11,7 +11,7 @@ import shlex
 import subprocess
 import time
 
-logging = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class InvalidDataIP(Exception):
@@ -22,7 +22,7 @@ class InvalidDataIP(Exception):
 
 def get_initiator_name():
     """Gets the iSCSI initiator name."""
-    logging.debug('Getting the initiator name.')
+    logger.debug('Getting the initiator name.')
     cmd = 'cat /etc/iscsi/initiatorname.iscsi'
     try:
         output = _exec_pipe(cmd)
@@ -30,12 +30,18 @@ def get_initiator_name():
         for line in lines:
             if '=' in line:
                 parts = line.split('=')
-                logging.debug("Returning initiator name {} .".format(parts[1]))
+                logger.debug("Returning initiator name {} .".format(parts[1]))
                 return parts[1]
     except:
-        logging.error('Initiator name could not be found!')
+        logger.error('Initiator name could not be found!')
         raise Exception('Unable to find initiator name')
 
+
+def check_multipath():
+    try:
+        _exec('multipath')
+    except:
+        raise Exception('multipath command error')
 
 def _exec(cmd):
     """Executes a command.
@@ -44,23 +50,23 @@ def _exec(cmd):
     :param cmd: The command line to run.
     :returns: The output from the command.
     """
-    logging.debug('Running command -> %s', cmd)
+    logger.debug('Running command -> %s', cmd)
     output = subprocess.check_output(shlex.split(cmd))
     if output:
-        logging.debug('Result: %s', output)
+        logger.debug('Result: %s', output)
     return output
 
 
 def _exec_pipe(cmd):
-    logging.debug('Running command -> %s', cmd)
+    logger.debug('Running command -> %s', cmd)
     sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = ''.join(sp.communicate())
     returncode = sp.wait()
     if returncode == 0:
-        logging.debug('Result: %s', output)
+        logger.debug('Result: %s', output)
         return output
     else:
-        logging.error(output)
+        logger.error(output)
         raise Exception('Command returned with non-zero return code')
 
 
@@ -69,34 +75,34 @@ def _do_login_logout(iqn, ip, do_login):
     try:
         action = "-u"  # for log out
         if do_login:
-            logging.info('Trying to perform iSCSI login with iqn {}, ip {} .'.format(iqn, ip))
+            logger.info('Trying to perform iSCSI login with iqn {}, ip {} .'.format(iqn, ip))
             action = "-l"
         else:
-            logging.info('Trying to perform iSCSI logout with iqn {}, ip {} .'.format(iqn, ip))
+            logger.info('Trying to perform iSCSI logout with iqn {}, ip {} .'.format(iqn, ip))
         _exec('iscsiadm -m node %s -T %s -p %s' %
               (action,
                iqn,
                ip))
-        logging.debug('Performed %s to %s at %s', action, iqn, ip)
+        logger.debug('Performed %s to %s at %s', action, iqn, ip)
         return True
     except subprocess.CalledProcessError:
         if do_login:
-            logging.error('Error while performing iSCSI login.')
+            logger.error('Error while performing iSCSI login.')
         else:
-            logging.error('Error while performing iSCSI logout.')
+            logger.error('Error while performing iSCSI logout.')
     return False
 
 
 def _manage_session(ip_addr, port, do_login=True):
     """Manage iSCSI sessions for all ports in a portal."""
-    logging.info('Managing session for portal ip address {}, port {}, do_login {}'.format(ip_addr, port, do_login))
+    logger.info('Managing session for portal ip address {}, port {}, do_login {}'.format(ip_addr, port, do_login))
     if ip_addr == '0.0.0.0':
-        logging.debug('Return, since ip is {} .'.format(ip_addr))
+        logger.debug('Return, since ip is {} .'.format(ip_addr))
         return
     try:
         output = _exec_pipe('iscsiadm -m discovery -t st -p %s %s' % (ip_addr, port))
     except:
-        logging.error('Data ip {} is invalid.'.format(ip_addr))
+        logger.error('Data ip {} is invalid.'.format(ip_addr))
         raise InvalidDataIP("Invalid data ip exception")
     lines = output.split('\n')
     for line in lines:
@@ -105,30 +111,30 @@ def _manage_session(ip_addr, port, do_login=True):
         target = line.split(' ')
         iqn = target[1]
         ip = target[0].split(',')[0]
-        logging.debug('Getting iqn {}, ip {}, from line {} .'.format(iqn, ip, line))
+        logger.debug('Getting iqn {}, ip {}, from line {} .'.format(iqn, ip, line))
         _do_login_logout(iqn, ip, do_login)
 
 
 def iscsi_session_login(ip_addr, port=3260):
     """Perform an iSCSI login."""
-    logging.info('Trying to do iscsi session logging with ip {} and port {} .'.format(ip_addr, port))
+    logger.info('Trying to do iscsi session logging with ip {} and port {} .'.format(ip_addr, port))
     return _manage_session(ip_addr, port, True)
 
 
 def iscsi_session_logout(portal_ip, port=3260):
     """Perform an iSCSI logout."""
-    logging.info('Trying to do iscsi session logout with portal ip {} and port {} .'.format(portal_ip, port))
+    logger.info('Trying to do iscsi session logout with portal ip {} and port {} .'.format(portal_ip, port))
     return _manage_session(portal_ip, port, False)
 
 
 def rescan_iscsi_session():
     """Perform an iSCSI rescan."""
-    logging.info("Rescanning scsi bus for attached disk")
+    logger.info("Rescanning scsi bus for attached disk")
     start = datetime.now()
     output = _exec('iscsiadm -m session --rescan')
     lines = output.split('\n')
     end = datetime.now()
-    logging.debug('Rescan took %s - output: %s', (end - start), lines)
+    logger.debug('Rescan took %s - output: %s', (end - start), lines)
 
 
 def _get_multipath_device(sd_device):
@@ -149,7 +155,7 @@ def _get_multipath_device(sd_device):
     :param sd_device: The SCSI device to look for.
     :return: The /dev/mapper/ multipath device if one exists.
     """
-    logging.info('Checking for multipath with path {} .'.format(sd_device))
+    logger.info('Checking for multipath with path {} .'.format(sd_device))
     result = None
     try:
         output = _exec('multipath -l %s' % sd_device)
@@ -160,10 +166,10 @@ def _get_multipath_device(sd_device):
                     continue
                 name = line.split(' ')[0]
                 result = '/dev/mapper/%s' % name
-                logging.debug('Found multipath device %s', result)
+                logger.debug('Found multipath device %s', result)
                 break
     except Exception:
-        logging.debug('No multipath with path {} .'.format(sd_device))
+        logger.debug('No multipath with path {} .'.format(sd_device))
         # Oh well, we tried.. simply pass it and go with the disk instead of mapper
         pass
 
@@ -178,29 +184,29 @@ def find_paths(device_id):
     :param device_id: The page 83 device id.
     :returns: A list of the local paths.
     """
-    logging.info("Finding paths with device id {} .".format(device_id))
+    logger.info("Finding paths with device id {} .".format(device_id))
     result = []
     regex = re.compile('sd[a-z]+(?![\d])')
     for dev in os.listdir('/dev/'):
         if regex.match(dev):
-            logging.debug('Checking device id of path /dev/{} .'.format(dev))
+            logger.debug('Checking device id of path /dev/{} .'.format(dev))
             try:
                 output = _exec('/lib/udev/scsi_id --page=0x83 '
                                '--whitelisted --device=/dev/%s' %
                                dev)
                 device_id_norm = device_id.lower()
-                logging.debug("Checking path /dev/{} for device id {} .".format(dev, device_id_norm))
+                logger.debug("Checking path /dev/{} for device id {} .".format(dev, device_id_norm))
                 output_norm = output.decode('utf-8')[1:33].strip().lower()
-                logging.debug("Path /dev/{} has device id {} .".format(dev, output_norm))
+                logger.debug("Path /dev/{} has device id {} .".format(dev, output_norm))
 
-                logging.debug(device_id_norm)
-                logging.debug(output_norm)
+                logger.debug(device_id_norm)
+                logger.debug(output_norm)
 
                 if device_id_norm == output_norm:
-                    logging.info('Found device %s at path %s', device_id, dev)
+                    logger.info('Found device %s at path %s', device_id, dev)
                     result.append('/dev/%s' % dev)
             except Exception:
-                logging.error('Error getting device id for /dev/%s', dev)
+                logger.error('Error getting device id for /dev/%s', dev)
 
     # ClusterHQ Functional tests always want the same device reported
     result.sort()
@@ -218,7 +224,7 @@ def remove_device(path):
 
     :param path: The /dev/sdX or /dev/mapper/X path to remove.
     """
-    logging.debug("Trying to remove device from path {} .".format(path))
+    logger.debug("Trying to remove device from path {} .".format(path))
     if not path:
         return
 
@@ -230,19 +236,19 @@ def remove_device(path):
                 _exec('blockdev --flushbufs %s' % path)
                 time.sleep(4)
             except Exception:
-                logging.error('Error flushing IO to %s', path)
+                logger.error('Error flushing IO to %s', path)
             try:
                 _exec('sh -c "echo 1 > %s"' % remove_path)
                 time.sleep(1)
             except Exception:
-                logging.error('Error removing device %s', sd)
+                logger.error('Error removing device %s', sd)
     else:
-        logging.debug("Trying to remove device from multipath {} .".format(path))
+        logger.debug("Trying to remove device from multipath {} .".format(path))
         try:
             path = path.replace('/dev/mapper/', '')
             _exec('multipath -f %s' % path)
         except Exception:
-            logging.error('Error removing multipath device {}'.format(path))
+            logger.error('Error removing multipath device {}'.format(path))
 
 
 if __name__ == "__main__":

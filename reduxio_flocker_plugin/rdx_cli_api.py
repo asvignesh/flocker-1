@@ -28,7 +28,7 @@ CLI_CONNECTION_RETRY_SLEEP = 5
 CLI_SSH_CMD_TIMEOUT = 20
 CLI_CONNECT_TIMEOUT = 50
 
-logging = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class RdxAPIConnectionException(Exception):
@@ -127,7 +127,7 @@ class ReduxioAPI(object):
             self._connect()
 
     def _connect(self):
-        logging.info("signin to Reduxio api client.")
+        logger.info("signin to Reduxio api client.")
         self.connected = False
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -137,14 +137,14 @@ class ReduxioAPI(object):
         except paramiko.ssh_exception.AuthenticationException:
             raise RdxAPIConnectionException("Authentication Error. Check login credentials")
         except Exception as e:
-            logging.error(str)
+            logger.error(str)
             raise RdxAPIConnectionException(
                 "Failed to create ssh connection to Reduxio. Please check network connection or Reduxio hostname/IP.")
 
     # @utils.synchronized(CONNECT_LOCK_NAME, external=True)
     def _run_cmd(self, cmd):
         cmd.json()
-        logging.info("Running cmd: {}".format(cmd))
+        logger.info("Running cmd: {}".format(cmd))
         success = False
         for x in range(1, CONNECTION_RETRY_NUM):
             try:
@@ -153,8 +153,8 @@ class ReduxioAPI(object):
                 success = True
                 break
             except Exception as e:
-                logging.error(str(e))
-                logging.error("Failed running cli command, retrying({}/{})".format(x, CONNECTION_RETRY_NUM))
+                logger.error(str(e))
+                logger.error("Failed running cli command, retrying({}/{})".format(x, CONNECTION_RETRY_NUM))
                 self.connected = False
                 time.sleep(CLI_CONNECTION_RETRY_SLEEP)
 
@@ -166,10 +166,10 @@ class ReduxioAPI(object):
         data = json.loads(str_out.decode('utf-8'))
 
         if stdout.channel.recv_exit_status() != 0:
-            logging.error("Failed running cli command: {}".format(data["msg"]))
+            logger.error("Failed running cli command: {}".format(data["msg"]))
             raise RdxAPICommandException(data["msg"])
 
-        # logging.debug("Command output is: {}".format(str_out))
+        logger.debug("Command output is: {}".format(str_out))
 
         return data["data"]
 
