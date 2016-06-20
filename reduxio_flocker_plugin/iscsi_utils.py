@@ -11,7 +11,7 @@ import shlex
 import subprocess
 import time
 
-LOG = logging.getLogger(__name__)
+logging = logging.getLogger(__name__)
 
 
 class InvalidDataIP(Exception):
@@ -30,7 +30,7 @@ def get_initiator_name():
         for line in lines:
             if '=' in line:
                 parts = line.split('=')
-                LOG.debug("Returning initiator name {} .".format(parts[1]))
+                logging.debug("Returning initiator name {} .".format(parts[1]))
                 return parts[1]
     except:
         logging.error('Initiator name could not be found!')
@@ -47,7 +47,7 @@ def _exec(cmd):
     logging.debug('Running command -> %s', cmd)
     output = subprocess.check_output(shlex.split(cmd))
     if output:
-        LOG.debug('Result: %s', output)
+        logging.debug('Result: %s', output)
     return output
 
 
@@ -57,10 +57,10 @@ def _exec_pipe(cmd):
     output = ''.join(sp.communicate())
     returncode = sp.wait()
     if returncode == 0:
-        LOG.debug('Result: %s', output)
+        logging.debug('Result: %s', output)
         return output
     else:
-        LOG.error(output)
+        logging.error(output)
         raise Exception('Command returned with non-zero return code')
 
 
@@ -81,9 +81,9 @@ def _do_login_logout(iqn, ip, do_login):
         return True
     except subprocess.CalledProcessError:
         if do_login:
-            LOG.error('Error while performing iSCSI login.')
+            logging.error('Error while performing iSCSI login.')
         else:
-            LOG.error('Error while performing iSCSI logout.')
+            logging.error('Error while performing iSCSI logout.')
     return False
 
 
@@ -193,8 +193,8 @@ def find_paths(device_id):
                 output_norm = output.decode('utf-8')[1:33].strip().lower()
                 logging.debug("Path /dev/{} has device id {} .".format(dev, output_norm))
 
-                LOG.debug(device_id_norm)
-                LOG.debug(output_norm)
+                logging.debug(device_id_norm)
+                logging.debug(output_norm)
 
                 if device_id_norm == output_norm:
                     logging.info('Found device %s at path %s', device_id, dev)

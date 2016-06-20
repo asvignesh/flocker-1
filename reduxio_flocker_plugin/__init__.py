@@ -10,15 +10,15 @@ from logging.handlers import RotatingFileHandler
 
 LOG_FILENAME = '/var/log/reduxio.log'
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logging = logging.getLogger()
+logging.setLevel(logging.DEBUG)
 
 handler = logging.handlers.RotatingFileHandler(LOG_FILENAME,
                                                maxBytes=5 * 1024 * 1024,
                                                backupCount=3)
 handler.setFormatter(logging.Formatter('%(asctime)s - %(module)s - %(levelname)s - %(funcName)s: %(message)s'))
 
-logger.addHandler(handler)
+logging.addHandler(handler)
 
 
 def api_factory(cluster_id, **kwargs):
@@ -26,16 +26,16 @@ def api_factory(cluster_id, **kwargs):
         if kwargs[u'rdx_ip']:
             rdx_ip = kwargs[u'rdx_ip']
         else:
-            logger.error('rdx_ip in Agent.yml is not configured properly.')
+            logging.error('rdx_ip in Agent.yml is not configured properly.')
             raise Exception('rdx_ip in Agent.yml is not configured properly.')
 
         if kwargs[u'password']:
             rdx_password = kwargs[u'password']
         else:
-            logger.error('password in Agent.yml is not configured properly.')
+            logging.error('password in Agent.yml is not configured properly.')
             raise Exception('password in Agent.yml is not configured properly.')
     except Exception as e:
-        logger.error('Agent.yml is not configured properly.')
+        logging.error('Agent.yml is not configured properly.')
         raise Exception('Agent.yml is not configured properly.')
     return reduxio_init_from_configuration(cluster_id=cluster_id,
                                            rdx_ip=rdx_ip,
@@ -50,13 +50,13 @@ def check_multipath():
 try:
     get_initiator_name()
 except:
-    logger.error('Unable to get initiator-name, please make sure that open-iscsi is installed.')
+    logging.error('Unable to get initiator-name, please make sure that open-iscsi is installed.')
     raise Exception('iscsi initiator is not installed')
 
 try:
     check_multipath()
 except:
-    logger.error('Error running multipath, please make sure that multipath-tools are installed.')
+    logging.error('Error running multipath, please make sure that multipath-tools are installed.')
     raise Exception('multipath-tools are not installed')
 
 FLOCKER_BACKEND = BackendDescription(

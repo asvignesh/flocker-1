@@ -23,7 +23,7 @@ __author__ = 'vignesh'
 
 MAX_RESCAN_ATTEMPTS = 4
 SLEEP_BWN_RESCAN_IN_S = 5
-logger = logging.getLogger(__name__)
+logging = logging.getLogger(__name__)
 
 
 # logging.basicConfig(filename=LOG_FILENAME,
@@ -96,7 +96,7 @@ class VolumeProfiles(Values):
 @implementer(IProfiledBlockDeviceAPI)
 class ReduxioStorageDriverAPI(object):
     def __init__(self, cluster_id, rdx_ip, password):
-        logger.info("ReduxioStorageDriverAPI Initializing")
+        logging.info("ReduxioStorageDriverAPI Initializing")
 
         self._cluster_id = cluster_id
         self._rdx_ip = rdx_ip
@@ -149,11 +149,11 @@ class ReduxioStorageDriverAPI(object):
         """
         try:
             volume_name = self._rdxhelper._volume_name_from_id(str(dataset_id))
-            logger.info(
+            logging.info(
                 "Trying to create volume named {} of size {}GB.".format(volume_name, Byte(size).to_GiB().__long__()))
             self._rdxapi.create_volume(name=volume_name, size=Byte(size).to_GiB().__long__(),
                                        description=str(dataset_id), blocksize=512)
-            logger.info("Checking if the volume {} is created.".format(volume_name))
+            logging.info("Checking if the volume {} is created.".format(volume_name))
             blockdevice_id = self._rdxapi.find_volume_by_name(name=volume_name)[u'wwid']
             logging.debug("Volume created successfully")
             logging.debug(blockdevice_id)
@@ -189,11 +189,11 @@ class ReduxioStorageDriverAPI(object):
         logging.info('Creating a Volume of size {} Bytes with dataset id {} .'.format(size, dataset_id))
         try:
             volume_name = self._rdxhelper._volume_name_from_id(str(dataset_id))
-            logger.debug(
+            logging.debug(
                 "Trying to create volume named {} of size {} GB.".format(volume_name, Byte(size).to_GiB().__long__()))
             self._rdxapi.create_volume(name=volume_name, size=Byte(size).to_GiB().__long__(),
                                        description=str(dataset_id), blocksize=512)
-            logger.debug("Checking if the volume {} is created.".format(volume_name))
+            logging.debug("Checking if the volume {} is created.".format(volume_name))
             blockdevice_id = self._rdxapi.find_volume_by_name(name=volume_name)[u'wwid']
             logging.info("Volume created successfully")
             logging.debug('blockdevice id of the volume {} is {} .'.format(volume_name, blockdevice_id))
@@ -225,16 +225,16 @@ class ReduxioStorageDriverAPI(object):
             raise UnknownVolume(e)
 
         try:
-            logger.debug("Checking if the volume {} is attached to any node/s.".format(volume_name))
+            logging.debug("Checking if the volume {} is attached to any node/s.".format(volume_name))
             assignment_list = self._rdxapi.list_assignments(vol_name=volume_name)
             if (len(assignment_list) > 0):
                 logging.error("Volume {} is attached to a node, so it cannot be destroyed.".format(volume_name))
                 raise VolumeAttached(blockdevice_id)
 
             # volume_name = self._rdxhelper._volume_name_from_id(str(dataset_id))
-            logger.debug("Trying to delete the volume {} .".format(volume_name))
+            logging.debug("Trying to delete the volume {} .".format(volume_name))
             self._rdxapi.delete_volume(name=volume_name)
-            logger.info("Volume {} deleted successfully.".format(volume_name))
+            logging.info("Volume {} deleted successfully.".format(volume_name))
         except Exception as e:
             logging.error("Destroy Volume {} failed.".format(volume_name))
             logging.error('Exception: ' + str(e))
@@ -263,7 +263,7 @@ class ReduxioStorageDriverAPI(object):
             raise UnknownVolume(e)
 
         try:
-            logger.info("Checking if the volume {} is attached to any node/s".format(volume_name))
+            logging.info("Checking if the volume {} is attached to any node/s".format(volume_name))
             assignmentlist = self._rdxapi.list_assignments(vol_name=volume_name)
             if (len(assignmentlist) > 0):
                 logging.error("Volume {} is already attached to a node.".format(volume_name))
@@ -272,21 +272,21 @@ class ReduxioStorageDriverAPI(object):
             hostname = None
             logging.debug('Listing all the hosts.')
             host_list = self._rdxapi.list_hosts()
-            logger.debug("Checking if the host with iscsi name {} already exist.".format(attach_to))
+            logging.debug("Checking if the host with iscsi name {} already exist.".format(attach_to))
             for host in host_list:
                 if (attach_to == host[u'iscsi_name']):
                     hostname = host[u'name']
-                    logger.debug('Host with iscsi name {} exists, Host name is {}'.format(hostname))
+                    logging.debug('Host with iscsi name {} exists, Host name is {}'.format(hostname))
                     break
 
             if (hostname is None):
                 logging.debug('Host not found, must be created.')
                 hostname = self._rdxhelper._host_name()
-                logger.debug(
+                logging.debug(
                     "Trying to create host {} with iscsi name {} since it does not exist.".format(hostname, attach_to))
                 self._rdxapi.create_host(name=hostname, iscsi_name=attach_to)
 
-            logger.debug("Trying to assign host {} to volume {} .".format(hostname, volume_name))
+            logging.debug("Trying to assign host {} to volume {} .".format(hostname, volume_name))
             self._rdxapi.assign(vol_name=volume_name, host_name=hostname)
             volume_size = volume_info[u'size']
 
@@ -294,7 +294,7 @@ class ReduxioStorageDriverAPI(object):
                                                       volume_size=volume_size, attach_to=attach_to)
             logging.info('Assigning host {} to volume {} is successful.'.format(hostname, volume_name))
             # Fetching the DataIPs and add to iscsi session
-            logger.debug("Getting all data IPs.")
+            logging.debug("Getting all data IPs.")
             data_ips = []
             settings_info = self._rdxapi.get_settings()
             data_ips.append(settings_info[u'iscsi_network1'][u'controller_1_port_1'])
@@ -338,7 +338,7 @@ class ReduxioStorageDriverAPI(object):
             device being detached.
         :return: `None``
         """
-        logger.info('detaching Volume with blockdevice id {} .'.format(blockdevice_id))
+        logging.info('detaching Volume with blockdevice id {} .'.format(blockdevice_id))
         try:
             volumeinfo = self.find_volume_by_blockdevice_id(blockdevice_id)
             volume_name = volumeinfo[u'name']
@@ -354,7 +354,7 @@ class ReduxioStorageDriverAPI(object):
             for path in paths:
                 remove_device(path)
 
-            logger.info("Revoking all hosts assigned to volume {} .".format(volume_name))
+            logging.info("Revoking all hosts assigned to volume {} .".format(volume_name))
             for assignment in assignmentlist:
                 logging.debug("Revoking {} .".format(volume_name))
                 self._rdxapi.unassign(vol_name=volume_name, host_name=assignment[u'host'])
