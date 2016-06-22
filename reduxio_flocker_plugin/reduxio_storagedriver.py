@@ -274,7 +274,6 @@ class ReduxioStorageDriverAPI(object):
             host_list = self._rdxapi.list_hosts()
             logger.debug("Checking if the host with iscsi name {} already exist.".format(attach_to))
             for host in host_list:
-
                 if attach_to == host[u'iscsi_name']:
                     hostname = host[u'name']
                     logger.debug('Host with iscsi name {} exists, Host name is {}'.format(attach_to, hostname))

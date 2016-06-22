@@ -37,12 +37,6 @@ def get_initiator_name():
         raise Exception('Unable to find initiator name')
 
 
-def check_multipath():
-    try:
-        _exec('multipath')
-    except:
-        raise Exception('multipath command error')
-
 def _exec(cmd):
     """Executes a command.
 
@@ -55,6 +49,13 @@ def _exec(cmd):
     if output:
         logger.debug('Result: %s', output)
     return output
+
+
+def check_multipath():
+    try:
+        _exec('multipath')
+    except:
+        raise Exception('multipath command error')
 
 
 def _exec_pipe(cmd):
