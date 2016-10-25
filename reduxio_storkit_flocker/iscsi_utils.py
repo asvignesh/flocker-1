@@ -14,9 +14,15 @@ import time
 logger = logging.getLogger(__name__)
 
 
-class InvalidDataIP(Exception):
+class ISCSIDiscoveryFailure(Exception):
     """
-    Invalid DatasetIP
+    Invalid DatapathIP
+    """
+
+
+class ISCSILoginFailed(Exception):
+    """
+    Invalid DatapathIP
     """
 
 
@@ -51,7 +57,7 @@ def _exec(cmd):
     return output
 
 
-def check_multipath():
+def is_multipath_tools_installed():
     try:
         _exec('multipath')
     except:
@@ -86,15 +92,29 @@ def _do_login_logout(iqn, ip, do_login):
                ip))
         logger.debug('Performed %s to %s at %s', action, iqn, ip)
         return True
-    except subprocess.CalledProcessError:
-        if do_login:
-            logger.error('Error while performing iSCSI login.')
-        else:
-            logger.error('Error while performing iSCSI logout.')
+    except Exception as e:
+        logger.error(str(e))
     return False
 
 
-def _manage_session(ip_addr, port, do_login=True):
+def enable_chap(iqn, ip, chap_user, chap_password):
+    update_props = 'iscsiadm -m node -T {} -p {} --op=update '.format(iqn, ip)
+    set_chap_auth = update_props + '--name node.session.auth.authmethod --value=CHAP'
+    set_chap_user = update_props + '--op=update --name node.session.auth.username --value={}'.format(chap_user)
+    set_chap_password = update_props + '--name node.session.auth.password --value={}'.format(chap_password)
+    try:
+        logger.info('Trying to add chap information, chap username: {} and chap password'.format(chap_user))
+        _exec_pipe(set_chap_auth)
+        _exec_pipe(set_chap_user)
+        _exec_pipe(set_chap_password)
+        logger.info('Successfully configured chap information for the login,'
+                    ' iqn: {}, ip {}, chap username: {}'.format(iqn, ip, chap_user))
+    except Exception as e:
+        logger.error("unable to set chap configuration, error: {}".format(str(e)))
+        raise Exception(str(e))
+
+
+def _manage_session(ip_addr, port, chap_user, chap_password, do_login=True):
     """Manage iSCSI sessions for all ports in a portal."""
     logger.info('Managing session for portal ip address {}, port {}, do_login {}'.format(ip_addr, port, do_login))
     if ip_addr == '0.0.0.0':
@@ -102,10 +122,11 @@ def _manage_session(ip_addr, port, do_login=True):
         return
     try:
         output = _exec_pipe('iscsiadm -m discovery -t st -p %s %s' % (ip_addr, port))
-    except:
-        logger.error('Data ip {} is invalid.'.format(ip_addr))
-        raise InvalidDataIP("Invalid data ip exception")
+    except Exception as e:
+        logger.error(str(e))
+        raise ISCSIDiscoveryFailure("Failed to discover targets")
     lines = output.split('\n')
+    login_success = False
     for line in lines:
         if ':' not in line:
             continue
@@ -113,7 +134,12 @@ def _manage_session(ip_addr, port, do_login=True):
         iqn = target[1]
         ip = target[0].split(',')[0]
         logger.debug('Getting iqn {}, ip {}, from line {} .'.format(iqn, ip, line))
-        _do_login_logout(iqn, ip, do_login)
+        if chap_user and chap_password:
+            enable_chap(iqn, ip, chap_user, chap_password)
+        _do_login_logout(iqn, ip, not do_login)
+        login_success |= _do_login_logout(iqn, ip, do_login)
+    if not login_success:
+        raise ISCSILoginFailed("Failed to login to iscsi targets")
 
 
 def iscsi_session_login(ip_addr, port=3260):
@@ -170,7 +196,7 @@ def _get_multipath_device(sd_device):
                 logger.debug('Found multipath device %s', result)
                 break
     except Exception:
-        logger.debug('No multipath with path {} .'.format(sd_device))
+        logger.error('No multipath with path {} .'.format(sd_device))
         # Oh well, we tried.. simply pass it and go with the disk instead of mapper
         pass
 
