@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """Reduxio CLI intrface class for Reduxio Cinder Driver."""
+import paramiko
 import datetime
 import json
 import datetime
 import time
 import socket
-
 import logging
 
 from exceptions import *
