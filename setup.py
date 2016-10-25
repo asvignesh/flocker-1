@@ -4,12 +4,12 @@ Copyright 2016 Reduxio, Inc.  All rights reserved.  Licensed under the Apache v2
 from setuptools import setup
 
 setup(
-    name="Reduxio Flocker driver",
+    name="Reduxio StorKit Flocker",
     packages=[
-        "reduxio_flocker_plugin"
+        "reduxio_storkit_flocker"
     ],
     package_data={
-        "reduxio_flocker_plugin": ["config/*"],
+        "reduxio_storkit_flocker": ["config/*"],
     },
     version="1.0",
     description="Reduxio Storage Plugin for ClusterHQ/Flocker.",
