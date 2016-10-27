@@ -2,6 +2,8 @@ version: 1
 control-service:
  hostname: "dockernode1"
 dataset:
- backend: "reduxio_flocker_plugin"
+ backend: "reduxio_storkit_flocker"
  rdx_ip: "reduxiohost1"
  password: "mypassword"
+ chap_user: "chap_username"
+ chap_password: "chap_password"

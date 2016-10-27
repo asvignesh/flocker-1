@@ -14,7 +14,6 @@
 #    under the License.
 """Reduxio CLI intrface class for Reduxio Cinder Driver."""
 import paramiko
-import datetime
 import json
 import datetime
 import time
@@ -46,6 +45,16 @@ class RdxAPIConnectionException(Exception):
     """
     connection to reduxio failed
     """
+
+
+class RdxAPICommandException(Exception):
+    """
+    command exec exception
+    """
+
+
+class RdxApiCmd(object):
+    """A Builder class for Reduxio CLI Command."""
 
     def __init__(self, cmd_prefix, argument=None, flags=None,
                  boolean_flags=None, force=None):
@@ -165,15 +174,14 @@ class ReduxioAPI(object):
                 logger.error(str(e))
                 pass
         except paramiko.ssh_exception.AuthenticationException:
-            raise rdx_exceptions.RdxAPIConnectionException(_(
-                "Authentication Error. Check login credentials"))
-        except Exception:
-            LOG.exeption(_("Exception in connecting to Reduxio CLI"))
-            raise rdx_exceptions.RdxAPIConnectionException(_(
-                "Failed to create ssh connection to Reduxio."
-                " Please check network connection or Reduxio hostname/IP."))
+            logger.error("Authentication error. Check login credentials")
+            raise RdxAPIConnectionException("Authentication Error. Check login credentials")
+        except Exception as e:
+            logger.error(str(e))
+            raise RdxAPIConnectionException(
+                "Failed to create ssh connection to Reduxio. Please check network connection or Reduxio hostname/IP.")
 
-    @utils.synchronized(CONNECT_LOCK_NAME, external=True)
+    # @utils.synchronized(CONNECT_LOCK_NAME, external=True)
     def _run_cmd(self, cmd):
         """Run the command and returns a dictionary of the response.
 
@@ -181,7 +189,7 @@ class ReduxioAPI(object):
         the function throws an error.
         """
         cmd.set_json_output()
-        LOG.info(_LI("Running cmd: %s"), cmd)
+        logger.info("Running cmd: {}".format(cmd))
         success = False
         for x in range(1, CONNECTION_RETRY_NUM):
             try:
@@ -190,28 +198,25 @@ class ReduxioAPI(object):
                     command=str(cmd), timeout=CLI_SSH_CMD_TIMEOUT)
                 success = True
                 break
-            except Exception:
-                LOG.exeption(_("Error in running Reduxio CLI command"))
-                LOG.error(
-                    _LE("retrying(%(cur)s/%(overall)s)"),
-                    {'cur': x, 'overall': CONNECTION_RETRY_NUM}
-                )
+            except Exception as e:
+                logger.error(str(e))
+                logger.error("Failed running cli command, retrying({}/{})".format(x, CONNECTION_RETRY_NUM))
                 self.connected = False
                 time.sleep(CLI_CONNECTION_RETRY_SLEEP)
 
         if not success:
-            raise rdx_exceptions.RdxAPIConnectionException(_(
+            raise RdxAPIConnectionException(
                 "Failed to connect to Redxuio CLI."
-                " Check your username,password or Reduxio Hostname/IP"))
+                " Check your username,password or Reduxio Hostname/IP")
 
         str_out = stdout.read()
         data = json.loads(str_out.decode('utf-8'))
 
         if stdout.channel.recv_exit_status() != 0:
-            LOG.error(_LE("Failed running cli command: %s"), data["msg"])
-            raise rdx_exceptions.RdxAPICommandException(data["msg"])
+            logger.error("Failed running cli command: {}".format(data["msg"]))
+            raise RdxAPICommandException(data["msg"])
 
-        LOG.debug("Command output is: %s", str_out)
+        logger.debug("Command output is: {}".format(str_out))
 
         return data["data"]
 
@@ -239,8 +244,7 @@ class ReduxioAPI(object):
 
     def list_volumes(self):
         """List all volumes."""
-        return self._run_cmd(RdxApiCmd(cmd_prefix=[VOLUMES, LS_COMMAND]))[
-            "volumes"]
+        return self._run_cmd(RdxApiCmd(cmd_prefix=[VOLUMES, LS_COMMAND]))["volumes"]
 
     def list_clones(self, name):
         """List all clones of a volume."""
@@ -367,6 +371,7 @@ class ReduxioAPI(object):
         return self._run_cmd(cmd)
 
     def delete_host(self, name):
+        """Delete an existing host."""
         cmd = RdxApiCmd(cmd_prefix=[HOSTS, DELETE_COMMAND])
 
         cmd.argument(name)
@@ -391,8 +396,7 @@ class ReduxioAPI(object):
 
     def list_hostgroups(self):
         """List all hostgroups."""
-        return self._run_cmd(RdxApiCmd(cmd_prefix=[HG_DIR, LS_COMMAND]))[
-            "hostgroups"]
+        return self._run_cmd(RdxApiCmd(cmd_prefix=[HG_DIR, LS_COMMAND]))["hostgroups"]
 
     def create_hostgroup(self, name, description=None):
         """Create a new hostgroup."""
@@ -496,15 +500,6 @@ class ReduxioAPI(object):
             cmd.argument(hg)
 
         return self._run_cmd(cmd)
-
-    def get_single_assignment(self, vol, host):
-        """Get a single assignment details between a host and a volume."""
-        for assign in self.list_assignments(vol=vol):
-            if assign["host"] == host:
-                return assign
-        raise rdx_exceptions.RdxAPICommandException(_(
-            "No such assignment vol:%(vol)s, host:%(host)s") %
-                                                    {'vol': vol, 'host': host})
 
     # Settings
 
