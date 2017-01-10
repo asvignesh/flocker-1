@@ -67,7 +67,7 @@ class Validations(object):
             raise Exception("Configured Reduxio ip/dns must not be empty.")
         if not args[u'password']:
             logger.error("Error in agent.yml, configured Reduxio storage password must not be empty.")
-            raise Exception("Configured Reduxio storage password must not be null.")
+            raise Exception("Configured Reduxio storage password must not be empty.")
 
 
 class ReduxioLogTimeFormatter(logging.Formatter):

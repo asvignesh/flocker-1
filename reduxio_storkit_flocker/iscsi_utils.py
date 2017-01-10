@@ -64,9 +64,10 @@ def is_multipath_tools_installed():
         raise Exception('multipath command error')
 
 
-def _exec_pipe(cmd, log_command=True):
-    if log_command:
-        logger.debug('Running command -> {}'.format(cmd))
+
+def _exec_pipe(cmd, log=None):
+    logger.debug('Running command -> {}'.format(log if log else cmd))
+
     sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = ''.join(sp.communicate())
     returncode = sp.wait()
@@ -91,7 +92,10 @@ def _do_login_logout(iqn, ip, do_login):
         _exec('iscsiadm -m node {} -T {} -p {}'.format(action, iqn, ip))
         end = datetime.now()
         if do_login:
-            logger.debug('Performed login with {} at {}, it took {}'.format(action, iqn, ip, (end - start)))
+            logger.debug('Performed login with {} at {}, it took {}'.format(iqn, ip, (end - start)))
+        else:
+            logger.debug('Performed logout with {} at {}, it took {}'.format(iqn, ip, (end - start)))
+
         return True
     except Exception as e:
         logger.error(str(e))
@@ -103,11 +107,12 @@ def enable_chap(iqn, ip, chap_user, chap_password):
     set_chap_auth = update_props + '--name node.session.auth.authmethod --value=CHAP'
     set_chap_user = update_props + '--name node.session.auth.username --value={}'.format(chap_user)
     set_chap_password = update_props + '--name node.session.auth.password --value={}'.format(chap_password)
+    log_pass = update_props + '--name node.session.auth.password --value=<chap_password>'
     try:
         logger.info('Trying to add chap information, chap username: {} and chap password'.format(chap_user))
         _exec_pipe(cmd=set_chap_auth)
         _exec_pipe(cmd=set_chap_user)
-        _exec_pipe(cmd=set_chap_password, log_command=False)
+        _exec_pipe(cmd=set_chap_password, log=log_pass)
         logger.info('Successfully configured chap information for the login,'
                     ' iqn: {}, ip {}, chap username: {}'.format(iqn, ip, chap_user))
     except Exception as e:
