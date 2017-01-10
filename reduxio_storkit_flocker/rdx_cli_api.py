@@ -183,7 +183,6 @@ class ReduxioAPI(object):
 
     # @utils.synchronized(CONNECT_LOCK_NAME, external=True)
     def _run_cmd(self, cmd, log=None):
-
         """Run the command and returns a dictionary of the response.
 
         On failure, the function retries the command. After retry threshold
@@ -235,7 +234,6 @@ class ReduxioAPI(object):
                       blocksize=None):
         """Create a new volume."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, NEW_COMMAND])
-
         cmd.argument(name)
         cmd.flag("size", size)
         cmd.flag("description", description)
@@ -472,7 +470,6 @@ class ReduxioAPI(object):
     def assign(self, vol_name, host_name=None, hostgroup_name=None, lun=None):
         """Create an assignment between a volume to host/hostgroup."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, "assign"])
-
         cmd.argument(vol_name)
         cmd.flag("host", host_name)
         cmd.flag("group", hostgroup_name)
@@ -483,7 +480,6 @@ class ReduxioAPI(object):
     def unassign(self, vol_name, host_name=None, hostgroup_name=None):
         """Unassign a volume from a host/hostgroup."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, "unassign"])
-
         cmd.argument(vol_name)
         cmd.flag("host", host_name)
         cmd.flag("group", hostgroup_name)
