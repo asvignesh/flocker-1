@@ -456,10 +456,8 @@ class ReduxioStorageDriverAPI(object):
             paths = find_paths(blockdevice_id)
             if paths:
                 # Just return the first path
-                logger.debug("it has path")
-                logger.debug("{} with realpath: {}".format(filepath.FilePath(paths[0]),
-                                                           filepath.FilePath(paths[0]).realpath()))
-                return filepath.FilePath(paths[0]).realpath()
+                logger.debug("it has path: {}".format(filepath.FilePath(paths[0])))
+                return filepath.FilePath(paths[0])
             retries += 1
             logger.debug('{} not found, attempt {}'.format(blockdevice_id, retries))
             time.sleep(SLEEP_BWN_RESCAN_IN_S)

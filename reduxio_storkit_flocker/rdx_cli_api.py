@@ -182,14 +182,14 @@ class ReduxioAPI(object):
                 "Failed to create ssh connection to Reduxio. Please check network connection or Reduxio hostname/IP.")
 
     # @utils.synchronized(CONNECT_LOCK_NAME, external=True)
-    def _run_cmd(self, cmd):
+    def _run_cmd(self, cmd, log=None):
         """Run the command and returns a dictionary of the response.
 
         On failure, the function retries the command. After retry threshold
         the function throws an error.
         """
         cmd.set_json_output()
-        logger.info("Running cmd: {}".format(cmd))
+        logger.info("Running cmd: {}".format(log if log else cmd))
         success = False
         for x in range(1, CONNECTION_RETRY_NUM):
             try:
@@ -206,7 +206,8 @@ class ReduxioAPI(object):
 
         if not success:
             raise RdxAPIConnectionException(
-                "Failed to connect to Redxuio CLI."
+
+                "Failed to connect to Reduxio CLI."
                 " Check your username,password or Reduxio Hostname/IP")
 
         str_out = stdout.read()
@@ -233,14 +234,13 @@ class ReduxioAPI(object):
                       blocksize=None):
         """Create a new volume."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, NEW_COMMAND])
-
         cmd.argument(name)
         cmd.flag("size", size)
         cmd.flag("description", description)
         cmd.flag("policy", historypolicy)
         cmd.flag("blocksize", blocksize)
 
-        self._run_cmd(cmd)
+        self._run_cmd(cmd=cmd)
 
     def list_volumes(self):
         """List all volumes."""
@@ -252,13 +252,13 @@ class ReduxioAPI(object):
 
         cmd.argument(name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def find_volume_by_name(self, name):
         """Get a single volume by its name."""
         cmd = RdxApiCmd(cmd_prefix=[LS_COMMAND, VOLUMES + "/" + name])
 
-        return self._run_cmd(cmd)["volumes"][0]
+        return self._run_cmd(cmd=cmd)["volumes"][0]
 
     def find_volume_by_wwid(self, wwid):
         """Get a single volume by its WWN."""
@@ -266,7 +266,7 @@ class ReduxioAPI(object):
 
         cmd.argument(wwid)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def delete_volume(self, name):
         """Delete a volume."""
@@ -275,7 +275,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.force()
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def update_volume(self, name, new_name=None, description=None, size=None,
                       history_policy=None):
@@ -286,10 +286,9 @@ class ReduxioAPI(object):
         cmd.flag("size", size)
         cmd.flag("new-name", new_name)
         cmd.flag("policy", history_policy)
-        cmd.flag("size", size)
         cmd.flag("description", description)
 
-        self._run_cmd(cmd)
+        self._run_cmd(cmd=cmd)
 
     def revert_volume(self, name, utc_date=None, bookmark_name=None):
         """Revert a volume to a specific date or by a bookmark."""
@@ -300,7 +299,7 @@ class ReduxioAPI(object):
         cmd.flag("bookmark", bookmark_name)
         cmd.force()
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def clone_volume(self, parent_name, clone_name, utc_date=None,
                      str_date=None, bookmark_name=None, description=None):
@@ -316,7 +315,7 @@ class ReduxioAPI(object):
         cmd.flag("bookmark", bookmark_name)
         cmd.flag("description", description)
 
-        self._run_cmd(cmd)
+        self._run_cmd(cmd=cmd)
 
     def list_vol_bookmarks(self, vol):
         """List all bookmarks of a volume."""
@@ -324,7 +323,7 @@ class ReduxioAPI(object):
 
         cmd.argument(vol)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def add_vol_bookmark(self, vol, bm_name, utc_date=None, str_date=None,
                          bm_type=None):
@@ -339,7 +338,7 @@ class ReduxioAPI(object):
             cmd.flag("timestamp", ReduxioAPI._utc_to_cli_date(utc_date))
         cmd.flag("type", bm_type)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def delete_vol_bookmark(self, vol, bm_name):
         """Delete a volume's bookmark."""
@@ -348,7 +347,7 @@ class ReduxioAPI(object):
         cmd.argument(vol)
         cmd.flag("name", bm_name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     # Hosts
 
@@ -366,9 +365,10 @@ class ReduxioAPI(object):
         cmd.flag("iscsi-name", iscsi_name)
         cmd.flag("description", description)
         cmd.flag("user-chap", user_chap)
+        log = (cmd.build() + ' pwd-chap ****** -output json') if pwd_chap else None
         cmd.flag("pwd-chap", pwd_chap)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd, log=log)
 
     def delete_host(self, name):
         """Delete an existing host."""
@@ -377,7 +377,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.force()
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def update_host(self, name, new_name=None, description=None,
                     user_chap=None, pwd_chap=None):
@@ -386,11 +386,12 @@ class ReduxioAPI(object):
 
         cmd.argument(name)
         cmd.flag("new-name", new_name)
-        cmd.flag("user-chap", user_chap)
-        cmd.flag("pwd-chap", pwd_chap)
         cmd.flag("description", description)
+        cmd.flag("user-chap", user_chap)
+        log = (cmd.build() + ' pwd-chap ****** -output json') if pwd_chap else None
+        cmd.flag("pwd-chap", pwd_chap)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd, log=log)
 
     # HostGroups
 
@@ -405,7 +406,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.flag("description", description)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def delete_hostgroup(self, name):
         """Delete an existing hostgroup."""
@@ -414,7 +415,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.force()
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def update_hostgroup(self, name, new_name=None, description=None):
         """Update an existing hostgroup's attributes."""
@@ -424,14 +425,14 @@ class ReduxioAPI(object):
         cmd.flag("new-name", new_name)
         cmd.flag("description", description)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def list_hosts_in_hostgroup(self, name):
         """List all hosts that are part of the given hostgroup."""
         cmd = RdxApiCmd(cmd_prefix=[HG_DIR, "list-hosts"])
         cmd.argument(name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def add_host_to_hostgroup(self, name, host_name):
         """Join a host to a hostgroup."""
@@ -439,7 +440,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.flag("host", host_name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def remove_host_from_hostgroup(self, name, host_name):
         """Remove a host from a hostgroup."""
@@ -447,7 +448,7 @@ class ReduxioAPI(object):
         cmd.argument(name)
         cmd.flag("host", host_name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def add_hg_bookmark(self, hg_name, bm_name, utc_date=None, str_date=None,
                         bm_type=None):
@@ -462,30 +463,28 @@ class ReduxioAPI(object):
             cmd.flag("timestamp", ReduxioAPI._utc_to_cli_date(utc_date))
         cmd.flag("type", bm_type)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     # Assignments
 
     def assign(self, vol_name, host_name=None, hostgroup_name=None, lun=None):
         """Create an assignment between a volume to host/hostgroup."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, "assign"])
-
         cmd.argument(vol_name)
         cmd.flag("host", host_name)
         cmd.flag("group", hostgroup_name)
         cmd.flag("lun", lun)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def unassign(self, vol_name, host_name=None, hostgroup_name=None):
         """Unassign a volume from a host/hostgroup."""
         cmd = RdxApiCmd(cmd_prefix=[VOLUMES, "unassign"])
-
         cmd.argument(vol_name)
         cmd.flag("host", host_name)
         cmd.flag("group", hostgroup_name)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     def list_assignments(self, vol=None, host=None, hg=None):
         """List all assignments for a given volume/host/hostgroup."""
@@ -495,11 +494,11 @@ class ReduxioAPI(object):
         elif host is not None:
             cmd = RdxApiCmd(cmd_prefix=[HOSTS, LIST_ASSIGN_CMD])
             cmd.argument(host)
-        elif host is not None:
+        elif hg is not None:
             cmd = RdxApiCmd(cmd_prefix=[HG_DIR, LIST_ASSIGN_CMD])
             cmd.argument(hg)
 
-        return self._run_cmd(cmd)
+        return self._run_cmd(cmd=cmd)
 
     # Settings
 
@@ -536,4 +535,4 @@ class ReduxioAPI(object):
     def get_current_space_usage(self):
         """Get current space usage."""
         cmd = RdxApiCmd(cmd_prefix=["statistics", "space-usage"])
-        return self._run_cmd(cmd)[0]
+        return self._run_cmd(cmd=cmd)[0]

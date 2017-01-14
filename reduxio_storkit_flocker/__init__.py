@@ -4,7 +4,7 @@ Copyright 2016 Reduxio, Inc.  All rights reserved.  Licensed under the Apache v2
 from flocker.node import BackendDescription, DeployerType
 
 from reduxio_storkit_flocker.reduxio_storagedriver import reduxio_init_from_configuration
-from iscsi_utils import get_initiator_name, is_multipath_tools_installed
+from iscsi_utils import get_initiator_name, is_multipath_tools_installed, is_iscsiadm_installed
 from rdx_helper import Validations, RotatingFileHandlerWithCompress, ReduxioLogTimeFormatter
 import logging
 
@@ -50,6 +50,12 @@ try:
 except:
     logger.error('Error running multipath, please ensure the relevant package is installed.')
     raise Exception('Error running multipath.')
+
+try:
+    is_iscsiadm_installed()
+except:
+    logger.error('Error running iscsiadm command, please ensure the relevant package is installed.')
+    raise Exception('Error running iscsiadm command.')
 
 FLOCKER_BACKEND = BackendDescription(
     name=u"reduxio_storkit_flocker",

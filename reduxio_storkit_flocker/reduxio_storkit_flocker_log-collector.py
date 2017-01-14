@@ -320,7 +320,7 @@ def main():
     if "ubuntu-14.04" in distrib:
         print GetReduxioFlockerPluginLogs(service_manager=UpstartServiceManager(),
                                           log_exporter=UpstartLogExporter()).create()
-    elif "centos" in distrib or "redhat" in distrib or "ubuntu-16.04" in distrib:
+    elif "centos" in distrib or "redhat" in distrib:
         print GetReduxioFlockerPluginLogs(service_manager=SystemdServiceManager(),
                                           log_exporter=JournaldLogExporter()).create()
 
