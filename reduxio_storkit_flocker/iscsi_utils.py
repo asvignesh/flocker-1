@@ -64,6 +64,13 @@ def is_multipath_tools_installed():
         raise Exception('multipath command error')
 
 
+def is_iscsiadm_installed():
+    try:
+        _exec('iscsiadm --help')
+    except:
+        raise Exception('iscsiadm command error')
+
+
 def _exec_pipe(cmd, log=None):
     logger.debug('Running command -> {}'.format(log if log else cmd))
     sp = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)

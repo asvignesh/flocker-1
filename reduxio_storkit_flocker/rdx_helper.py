@@ -39,6 +39,12 @@ class RdxHelper(object):
 
 class Validations(object):
     def _is_chap_credentials_configured_and_valid(self, args):
+        if not args[u'chap_user']:
+            logger.error("Error in agent.yml, chap username can not be empty.")
+            raise Exception("Configured chap username must not be empty.")
+        if not args[u'chap_password']:
+            logger.error("Error in agent.yml, chap password can not be empty.")
+            raise Exception("Configured chap password must not be empty.")
         if len(args[u'chap_user']) > 255:
             logger.error("Error in agent.yml, chap username length must not exceed 255.")
             raise Exception("Configured chap username exceeds the limit.")
@@ -55,6 +61,8 @@ class Validations(object):
             logger.error("Error in agent.yml, chap password configured without chap username.")
             raise Exception("Chap password configured without chap username.")
         if u'chap_user' in args and u'chap_password' in args:
+            if not args[u'chap_user'] and not args[u'chap_password']:
+                return False
             return self._is_chap_credentials_configured_and_valid(args)
         return False
 
